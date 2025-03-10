@@ -1,0 +1,110 @@
+import pandas as pd
+import json
+import datetime
+import plotly.express as px
+
+file_path = r"C:\Users\Adam-QA\Desktop\network_log_iPhone_13_report.json"
+with open(file_path, "r", encoding="utf-8") as f:
+    network_data = json.load(f)
+
+df = pd.DataFrame(network_data)
+
+df["startTimeReadable"] = df["startTime"].apply(
+    lambda x: datetime.datetime.fromtimestamp(x / 1000).strftime('%Y-%m-%d %H:%M:%S')
+)
+
+df["loadTimeReadable"] = df["duration"].apply(
+    lambda x: str(datetime.timedelta(milliseconds=x))
+)
+
+# Sortowanie po czasie rozpoczęcia
+df_sorted = df.sort_values(by="startTime")
+
+# Top 10 najwolniejszych requestów
+top_10_slowest = df_sorted.nlargest(10, "duration")
+
+# Tworzenie wykresu Request Timeline
+fig_timeline = px.scatter(
+    df_sorted, x="startTimeReadable", y="duration",
+    hover_data=["url", "method", "status", "size", "loadTimeReadable"],
+    labels={"startTimeReadable": "Time Since Test Start", "duration": "Load Time (ms)"},
+    title="Request Timeline - Load Time vs. Test Execution",
+    color="status",
+)
+
+html_timeline_chart_path = r"C:\Users\Adam-QA\Desktop\timeline_chart.html"
+fig_timeline.write_html(html_timeline_chart_path, full_html=False, include_plotlyjs="cdn")
+
+with open(html_timeline_chart_path, "r", encoding="utf-8") as f:
+    timeline_chart_html = f.read()
+
+html_report_path = r"C:\Users\Adam-QA\Desktop\full_network_report.html"
+
+html_template = f"""
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Network Performance Report</title>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <style>
+        body {{ font-family: Arial, sans-serif; margin: 20px; }}
+        h1, h2 {{ color: #333; }}
+        .container {{ max-width: 1200px; margin: auto; }}
+        table {{ width: 100%; border-collapse: collapse; margin-top: 20px; table-layout: fixed; }}
+        th, td {{ border: 1px solid #ddd; padding: 8px; text-align: left; word-wrap: break-word; overflow-wrap: break-word; }}
+        th {{ background-color: #f4f4f4; }}
+        .metadata {{ margin-bottom: 20px; }}
+        .chart-container {{ margin-bottom: 40px; }}
+        .url-cell {{ word-wrap: break-word; overflow-wrap: break-word; white-space: normal; max-width: 300px; word-break: break-all; }}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Network Performance Report</h1>
+        <div class="metadata">
+            <p><strong>Tested Page:</strong> https://example.com/</p>
+            <p><strong>Device:</strong> iPhone 13 (Incognito Mode)</p>
+            <p><strong>Total Requests:</strong> {len(df_sorted)}</p>
+        </div>
+
+        <h2>Request Timeline</h2>
+        <div class="chart-container">
+            {timeline_chart_html}
+        </div>
+
+        <h2>Top 10 Slowest Requests</h2>
+        <table>
+            <tr>
+                <th style="width: 40%;">URL</th>
+                <th style="width: 15%;">Time Sent</th>
+                <th style="width: 10%;">Method</th>
+                <th style="width: 10%;">Status</th>
+                <th style="width: 10%;">Size (B)</th>
+                <th style="width: 15%;">Load Time</th>
+            </tr>
+            {''.join(f'<tr><td class="url-cell">{row["url"]}</td><td>{row["startTimeReadable"]}</td><td>{row["method"]}</td><td>{row["status"]}</td><td>{row["size"]}</td><td>{row["loadTimeReadable"]}</td></tr>' for _, row in top_10_slowest.iterrows())}
+        </table>
+
+        <h2>Request Details</h2>
+        <table>
+            <tr>
+                <th style="width: 40%;">URL</th>
+                <th style="width: 15%;">Time Sent</th>
+                <th style="width: 10%;">Method</th>
+                <th style="width: 10%;">Status</th>
+                <th style="width: 10%;">Size (B)</th>
+                <th style="width: 15%;">Load Time</th>
+            </tr>
+            {''.join(f'<tr><td class="url-cell">{row["url"]}</td><td>{row["startTimeReadable"]}</td><td>{row["method"]}</td><td>{row["status"]}</td><td>{row["size"]}</td><td>{row["loadTimeReadable"]}</td></tr>' for _, row in df_sorted.iterrows())}
+        </table>
+    </div>
+</body>
+</html>
+"""
+
+with open(html_report_path, "w", encoding="utf-8") as f:
+    f.write(html_template)
+
+print(f"✅ Report generated: {html_report_path}")

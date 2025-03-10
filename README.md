@@ -1,1 +1,2 @@
-# .json-to-html-report-in-Python
+(ENG) In my previous repository you can find how to create logs using playwright in .json file. Here you can find how to transfer them to .html report that you can show your client.
+(PL) W moim poprzednim repozytorium pokazałem jak można korzystać z playwright do stworzenia pliku .json, gdzie zebrane zostaną wszystkie żądania sieci w trakcie przechodzenia prze stronę. W tym pokazuję, jak pobrany plik .json można prosto zamienić na html za pomocą pythona
